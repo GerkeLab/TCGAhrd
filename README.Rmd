@@ -1,0 +1,222 @@
+---
+title: "Homologous Recombination Deficiency"
+output: github_document
+---
+
+```{r multiplot_function, include = FALSE}
+
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+  
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+  
+  numPlots = length(plots)
+  
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                     ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+  
+  if (numPlots==1) {
+    print(plots[[1]])
+    
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+    
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+      
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+
+```
+
+"We calculated HRD scores following previous published 3 components of HRD/genome scarring scores: HRD-LOH (Abkevich et al., 2012), LST (Popova et al., 2012), NtAI (Birkbak et al., 2012) and the implementation of a sum of the three (Marquard et al., 2015)." - Knijnenburg et al
+
+Scores downloaded from : https://gdc.cancer.gov/about-data/publications/PanCan-DDR-2018 on June 6, 2019 10:12 AM. They were then combined with PanCancer Atlas clinical data available from :  https://github.com/GerkeLab/TCGAclinical/blob/master/data/clinical_survival_pancancer_atlas.RData. Gene expression data can be downloaded from : https://gdc.cancer.gov/about-data/publications/PanCan-CellOfOrigin
+
+```{r setup, include = FALSE}
+
+.libPaths(c("~/Documents/Rpackagesv2", .libPaths()))
+library(tidyverse)
+
+# import score names 
+scores <- read_delim("/Volumes/data/TCGA/HRD_status_signature/data/TCGA_DDR_Data_Resources/Scores.tsv", 
+                     "\t", escape_double = FALSE, col_names = FALSE, trim_ws = TRUE)
+
+# import sample list 
+samples <- read_delim("/Volumes/data/TCGA/HRD_status_signature/data/TCGA_DDR_Data_Resources/Samples.tsv", 
+                      "\t", escape_double = FALSE, col_names = FALSE, trim_ws = TRUE)
+
+# import actual scores
+DDRscores <- read_delim("/Volumes/data/TCGA/HRD_status_signature/data/TCGA_DDR_Data_Resources/DDRscores.tsv", 
+                        "\t", escape_double = FALSE, col_names = FALSE, trim_ws = TRUE)
+
+# combine and rename 
+dat <- data.frame(cbind(samples, DDRscores))
+colnames(dat) <- c("patient_id","acronym",scores$X1)
+
+rm(scores, samples, DDRscores)
+
+# save scores for use later 
+# write.table(dat, file = "/Volumes/Lab_Gerke/TCGA/HRD_status_signature/data/intermediateFiles/DDRscores.txt",
+#             sep="\t", row.names = FALSE)
+# save(dat, file = "/Volumes/Lab_Gerke/TCGA/HRD_status_signature/data/intermediateFiles/DDRscores.RData")
+
+```
+
+```{r HRD_by_cancer, echo = FALSE, warning = FALSE}
+
+ggplot(dat, aes(x = acronym, y = HRD_Score, fill = as.factor(acronym))) + 
+  scale_fill_manual(values = rep("white",length(unique(dat$acronym)))) +
+  geom_jitter(position = position_jitterdodge(jitter.width = .15,
+                                              jitter.height = 0,
+                                              dodge.width = .75),
+              aes(fill = as.factor(acronym), col = as.factor(acronym)), alpha = 0.5) + 
+  geom_boxplot(outlier.shape = NA, alpha = 0) + 
+  theme(axis.text.x = element_text(angle = 90),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "black")) + 
+  guides(fill=FALSE, colour=FALSE) +
+  labs(x = "Cancer Type", y = "HRD Score")
+
+```
+
+```{r HRD_subtypes_by_cancer, echo = FALSE, warning = FALSE}
+
+p1 <- ggplot(dat, aes(x = acronym, y = HRD_LOH, fill = as.factor(acronym))) + 
+  scale_fill_manual(values = rep("white",length(unique(dat$acronym)))) +
+  geom_jitter(position = position_jitterdodge(jitter.width = .15,
+                                              jitter.height = 0,
+                                              dodge.width = .75),
+              aes(fill = as.factor(acronym), col = as.factor(acronym)), alpha = 0.5) + 
+  geom_boxplot(outlier.shape = NA, alpha = 0) + 
+  theme(axis.text.x = element_text(angle = 90),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "white")) + 
+  guides(fill=FALSE, colour=FALSE) +
+  labs(x = "Cancer Type", y = "LOH") + 
+  coord_flip()
+
+p2 <- ggplot(dat, aes(x = acronym, y = HRD_LST, fill = as.factor(acronym))) + 
+  scale_fill_manual(values = rep("white",length(unique(dat$acronym)))) +
+  geom_jitter(position = position_jitterdodge(jitter.width = .15,
+                                              jitter.height = 0,
+                                              dodge.width = .75),
+              aes(fill = as.factor(acronym), col = as.factor(acronym)), alpha = 0.5) + 
+  geom_boxplot(outlier.shape = NA, alpha = 0) + 
+  theme(axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        panel.background = element_blank(), 
+        axis.line.y = element_line(colour = "white")) + 
+  guides(fill=FALSE, colour=FALSE) +
+  labs(x = "", y = "LST") + 
+  coord_flip()
+
+p3 <- ggplot(dat, aes(x = acronym, y = HRD_TAI, fill = as.factor(acronym))) + 
+  scale_fill_manual(values = rep("white",length(unique(dat$acronym)))) +
+  geom_jitter(position = position_jitterdodge(jitter.width = .15,
+                                              jitter.height = 0,
+                                              dodge.width = .75),
+              aes(fill = as.factor(acronym), col = as.factor(acronym)), alpha = 0.5) + 
+  geom_boxplot(outlier.shape = NA, alpha = 0) + 
+  theme(axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        panel.background = element_blank(), 
+        axis.line.y = element_line(colour = "white")) + 
+  guides(fill=FALSE, colour=FALSE) +
+  labs(x = "", y = "NtAI") + 
+  coord_flip()
+
+multiplot(p1,p2,p3, cols=3)
+
+rm(p1,p2,p3)
+
+```
+
+# HRD Scores
+
+The HRD scores as derived from Knijnenburg et al are available for 9125 samples across 33 cancer types. 8602 samples are from primary solid tumor, 162 from primary blood derived cancer - peripheral blood and 361 from mets. All 162 primary blood derived cancer - peripheral blood samples came from LAML and all 361 mets cases were from SKCM. Each patient only had one sample with HRD calculated (even if they supplied multiple tissue samples). HRD scores ranged from 1 to 101, with a median value of 14 and varied by cancer type (see above image). 
+
+```{r clinical_merge, echo = FALSE}
+
+hrd <- dat 
+
+clinicalURL <- "https://github.com/GerkeLab/TCGAclinical/raw/master/data/clinical_survival_pancancer_atlas.RData"
+
+load(url(clinicalURL))
+
+full_dat <- dat %>%
+  inner_join(hrd %>% 
+               mutate(patient_barcode = substr(patient_id,1,12)) %>%
+               select(-c(patient_id, acronym)),
+             by = c("bcr_patient_barcode" = "patient_barcode"))
+
+# save scores for use later 
+# write.table(full_dat, file = "/Volumes/Lab_Gerke/TCGA/HRD_status_signature/data/intermediateFiles/clinical_and_hrd.txt",sep="\t", row.names = FALSE)
+# save(full_dat, file = "/Volumes/Lab_Gerke/TCGA/HRD_status_signature/data/intermediateFiles/clinical_and_hrd.RData")
+
+rm(clinicalURL)
+
+```
+
+HRD scores are missing for `r length(hrd[is.na(hrd$HRD_Score),]$patient_id)` samples in the original data (Knijnenburg et al). Of the 9125 patients, `r 9125-length(intersect(dat$bcr_patient_barcode, substr(hrd$patient_id,1,12)))` are missing clinical data from the PanCancer Atlas. From the PanCancer Atlas `r length(setdiff(dat$bcr_patient_barcode, substr(hrd$patient_id,1,12)))` samples were not included in the original HRD calculations. 
+
+```{r gene_merge, echo = FALSE, message = FALSE, warning = FALSE}
+
+library(data.table)
+
+gene <- fread("/Volumes/data/panCancer/data/EBPlusPlusAdjustPANCAN_IlluminaHiSeq_RNASeqV2-v2.geneExp.tsv")
+
+# gene_t <- t(gene[,2:ncol(gene)])
+# colnames(gene_t) <- gene$gene_id
+# gene_t <- as.data.frame(cbind(sample_id = row.names(gene_t),
+#                               gene_t))
+# gene_t$sample_id <- substr(gene_t$sample_id,1,15)
+# 
+# gene_hrd <- hrd %>%
+#   inner_join(gene_t, by = c("patient_id" = "sample_id")) 
+#   
+#   
+# # save scores for use later 
+# write.table(gene_hrd, file = "/Volumes/data/TCGA/HRD_status_signature/data/intermediateFiles/gene_and_hrd.txt",sep="\t", row.names = FALSE)
+# save(gene_hrd, file = "/Volumes/data/TCGA/HRD_status_signature/data/intermediateFiles/gene_and_hrd.RData")
+# 
+
+```
+
+`r length(intersect(substr(colnames(gene),1,15),hrd$patient_id))` of the 9125 samples also have gene expression data from the same tissue available. 
+
+**Created files:**
+
+  * DDRscores.RData and DDRscores.txt - combined score information from Knijnenburg in a usable format 
+  * clinical_and_hrd.RData and clinical_and_hrd.txt - PanCancer clinical data with scores information (`r length(unique(full_dat$bcr_patient_barcode))` overlapping patients only)
+  * gene_and_hrd.RData and gene_and_hrd.txt - PanCancer gene expression data with scores information (`r length(intersect(substr(colnames(gene),1,15),hrd$patient_id))` overlapping patients only)
+
+**Abbreviations:**
+
+  * HRD  - homologous recombination deficiency
+  * LOH  - loss of heterozygosity
+  * LST  - large-scale state transitions 
+  * NtAI - number of subchromosomal regions with allelic imbalance extending to the telomere
+  
