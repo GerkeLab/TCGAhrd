@@ -46,7 +46,8 @@ tissue available.
     only)
   - gene\_and\_hrd.RData and gene\_and\_hrd.txt - PanCancer gene
     expression data with scores information (9118 overlapping patients
-    only)
+    only). These files are too large to place on GitHub and are
+    available on request.
 
 **Abbreviations:**
 

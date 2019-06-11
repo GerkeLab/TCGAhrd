@@ -211,7 +211,7 @@ gene <- fread("/Volumes/data/panCancer/data/EBPlusPlusAdjustPANCAN_IlluminaHiSeq
 
   * DDRscores.RData and DDRscores.txt - combined score information from Knijnenburg in a usable format 
   * clinical_and_hrd.RData and clinical_and_hrd.txt - PanCancer clinical data with scores information (`r length(unique(full_dat$bcr_patient_barcode))` overlapping patients only)
-  * gene_and_hrd.RData and gene_and_hrd.txt - PanCancer gene expression data with scores information (`r length(intersect(substr(colnames(gene),1,15),hrd$patient_id))` overlapping patients only)
+  * gene_and_hrd.RData and gene_and_hrd.txt - PanCancer gene expression data with scores information (`r length(intersect(substr(colnames(gene),1,15),hrd$patient_id))` overlapping patients only). These files are too large to place on GitHub and are available on request. 
 
 **Abbreviations:**
 
