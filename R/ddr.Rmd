@@ -1,0 +1,100 @@
+---
+title: "DNA damage repair"
+date: "11/12/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(tidyverse)
+library(viridis)
+library(broom)
+```
+
+DDR scores were imported from a perviously cleaned version of the data from Knijnenburg et al. DDR scores were available for 6440 samples. 
+
+```{r ddr_import}
+## precalculated by Knijnenburg et al. 
+
+ddr <- "https://github.com/GerkeLab/TCGAhrd/raw/master/data/intermediateFIles/DDRscores.RData"
+load(url(ddr))
+
+```
+
+Ancestry estimates were imported from another github repo. Ancestry estimates from the same tissue type were merged with DDR scores. The final dataset contains 6440 samples. 
+
+```{r ancestry_import}
+
+ancestry <- "https://github.com/GerkeLab/TCGAancestry/raw/master/data/admixture_calls.txt"
+dat_ancestry <- read.table(ancestry, sep="\t", header = TRUE)
+
+dat_ancestry <- dat_ancestry %>%
+  filter(tissue %in% c("Primary Solid Tumor",
+                       "Primary Blood Derived Cancer - Peripheral Blood",
+                       "Metastatic")) %>%
+  mutate(barcode = case_when(
+    tissue == "Primary Solid Tumor" ~ paste0(ID, "-01"),
+    tissue == "Primary Blood Derived Cancer - Peripheral Blood" ~ paste0(ID, "-03"),
+    tissue == "Metastatic" ~ paste0(ID, "-06")
+  ))
+
+rm(ancestry)
+
+```
+
+```{r combine_data}
+
+full <- dat %>% 
+  select(patient_id, acronym, rppa_ddr_score) %>% 
+  left_join(dat_ancestry %>% select(barcode, POP:AFR),
+            by = c("patient_id" = "barcode")) %>% 
+  filter(!is.na(rppa_ddr_score))
+
+full <- full[!duplicated(full$patient_id),]
+
+rm(dat, dat_ancestry)
+
+```
+
+```{r quick_figure, warning=FALSE, fig.pos="center", fig.cap=c("DDR scores by dominant ancestral populations and startified by cancer type. ")}
+
+ggplot(full, aes(x = POP, y = rppa_ddr_score, fill = as.factor(POP))) + 
+  scale_fill_manual(values = rep("white",length(unique(full$POP)))) +
+  geom_jitter(position = position_jitterdodge(jitter.width = .95,
+                                              jitter.height = 0,
+                                              dodge.width = .95),
+              aes(fill = as.factor(POP), col = as.factor(POP)), alpha = 0.5) + 
+  geom_boxplot(outlier.shape = NA, alpha = 0) + 
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "black")) + 
+  guides(fill=FALSE, colour=FALSE) +
+  labs(x = "Ancestral Population", y = "DDR Score") + 
+  scale_color_viridis_d() + 
+  facet_wrap(~acronym)
+
+
+```
+
+Five linear models were created comparing ancestry estimates for each population and adjusting for cancer type. Results  for population proportion from each model are shown below. 
+
+```{r quick_tables}
+
+model1 <- lm(rppa_ddr_score ~ EUR + acronym, data = full)
+model2 <- lm(rppa_ddr_score ~ AFR + acronym, data = full)
+model3 <- lm(rppa_ddr_score ~ EAS + acronym, data = full)
+model4 <- lm(rppa_ddr_score ~ SAS + acronym, data = full)
+model5 <- lm(rppa_ddr_score ~ AMR + acronym, data = full)
+
+tableX <- tidy(model1) %>% 
+  filter(term == "EUR") %>% 
+  bind_rows(tidy(model2) %>% filter(term == "AFR")) %>%
+  bind_rows(tidy(model3) %>% filter(term == "EAS")) %>% 
+  bind_rows(tidy(model4) %>% filter(term == "SAS")) %>%
+  bind_rows(tidy(model5) %>% filter(term == "AMR")) 
+
+tableX
+
+```
