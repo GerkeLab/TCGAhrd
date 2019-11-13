@@ -1,6 +1,5 @@
 ---
 title: "DNA damage repair"
-date: "11/12/2019"
 output: html_document
 ---
 
@@ -10,6 +9,7 @@ knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(viridis)
 library(broom)
+library(kableExtra)
 ```
 
 DDR scores were imported from a perviously cleaned version of the data from Knijnenburg et al. DDR scores were available for 6440 samples. 
@@ -57,7 +57,9 @@ rm(dat, dat_ancestry)
 
 ```
 
-```{r quick_figure, warning=FALSE, fig.pos="center", fig.cap=c("DDR scores by dominant ancestral populations and startified by cancer type. ")}
+***
+
+```{r quick_figure, warning=FALSE, fig.pos="center", fig.cap=c("DDR scores by dominant ancestral populations and startified by cancer type."), fig.width=12, fig.height=12}
 
 ggplot(full, aes(x = POP, y = rppa_ddr_score, fill = as.factor(POP))) + 
   scale_fill_manual(values = rep("white",length(unique(full$POP)))) +
@@ -78,23 +80,35 @@ ggplot(full, aes(x = POP, y = rppa_ddr_score, fill = as.factor(POP))) +
 
 ```
 
-Five linear models were created comparing ancestry estimates for each population and adjusting for cancer type. Results  for population proportion from each model are shown below. 
+***
+
+Linear model for DDR score by dominant population (ref = "EUR") and adjusting for cancer type. 
 
 ```{r quick_tables}
 
-model1 <- lm(rppa_ddr_score ~ EUR + acronym, data = full)
-model2 <- lm(rppa_ddr_score ~ AFR + acronym, data = full)
-model3 <- lm(rppa_ddr_score ~ EAS + acronym, data = full)
-model4 <- lm(rppa_ddr_score ~ SAS + acronym, data = full)
-model5 <- lm(rppa_ddr_score ~ AMR + acronym, data = full)
+# model1 <- lm(rppa_ddr_score ~ EUR + acronym, data = full)
+# model2 <- lm(rppa_ddr_score ~ AFR + acronym, data = full)
+# model3 <- lm(rppa_ddr_score ~ EAS + acronym, data = full)
+# model4 <- lm(rppa_ddr_score ~ SAS + acronym, data = full)
+# model5 <- lm(rppa_ddr_score ~ AMR + acronym, data = full)
+# 
+# tableX <- tidy(model1) %>% 
+#   filter(term == "EUR") %>% 
+#   bind_rows(tidy(model2) %>% filter(term == "AFR")) %>%
+#   bind_rows(tidy(model3) %>% filter(term == "EAS")) %>% 
+#   bind_rows(tidy(model4) %>% filter(term == "SAS")) %>%
+#   bind_rows(tidy(model5) %>% filter(term == "AMR")) 
+# 
+# kable(tableX, align='c')
 
-tableX <- tidy(model1) %>% 
-  filter(term == "EUR") %>% 
-  bind_rows(tidy(model2) %>% filter(term == "AFR")) %>%
-  bind_rows(tidy(model3) %>% filter(term == "EAS")) %>% 
-  bind_rows(tidy(model4) %>% filter(term == "SAS")) %>%
-  bind_rows(tidy(model5) %>% filter(term == "AMR")) 
+dom_pop <- lm(rppa_ddr_score ~ relevel(full$POP, ref="EUR") + acronym, data = full)
 
-tableX
+tableX <- tidy(dom_pop) 
+
+tableX <- tableX[2:5,]
+tableX$term <- substr(tableX$term, 31,35)
+
+kable(tableX) %>% 
+  kable_styling(bootstrap_options = "striped", full_width = F)
 
 ```
