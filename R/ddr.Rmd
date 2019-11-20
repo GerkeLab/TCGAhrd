@@ -53,13 +53,13 @@ full <- dat %>%
 
 full <- full[!duplicated(full$patient_id),]
 
-rm(dat, dat_ancestry)
+rm(dat_ancestry)
 
 ```
 
 ***
 
-```{r quick_figure, warning=FALSE, fig.pos="center", fig.cap=c("DDR scores by dominant ancestral populations and startified by cancer type."), fig.width=12, fig.height=12}
+```{r quick_figure, warning=FALSE, fig.pos="center", fig.cap=c("DDR scores by dominant ancestral populations and stratified by cancer type."), fig.width=12, fig.height=12}
 
 ggplot(full, aes(x = POP, y = rppa_ddr_score, fill = as.factor(POP))) + 
   scale_fill_manual(values = rep("white",length(unique(full$POP)))) +
@@ -86,21 +86,6 @@ Linear model for DDR score by dominant population (ref = "EUR") and adjusting fo
 
 ```{r quick_tables}
 
-# model1 <- lm(rppa_ddr_score ~ EUR + acronym, data = full)
-# model2 <- lm(rppa_ddr_score ~ AFR + acronym, data = full)
-# model3 <- lm(rppa_ddr_score ~ EAS + acronym, data = full)
-# model4 <- lm(rppa_ddr_score ~ SAS + acronym, data = full)
-# model5 <- lm(rppa_ddr_score ~ AMR + acronym, data = full)
-# 
-# tableX <- tidy(model1) %>% 
-#   filter(term == "EUR") %>% 
-#   bind_rows(tidy(model2) %>% filter(term == "AFR")) %>%
-#   bind_rows(tidy(model3) %>% filter(term == "EAS")) %>% 
-#   bind_rows(tidy(model4) %>% filter(term == "SAS")) %>%
-#   bind_rows(tidy(model5) %>% filter(term == "AMR")) 
-# 
-# kable(tableX, align='c')
-
 dom_pop <- lm(rppa_ddr_score ~ relevel(full$POP, ref="EUR") + acronym, data = full)
 
 tableX <- tidy(dom_pop) 
@@ -110,5 +95,63 @@ tableX$term <- substr(tableX$term, 31,35)
 
 kable(tableX) %>% 
   kable_styling(bootstrap_options = "striped", full_width = F)
+
+```
+
+***
+
+### Blood ancestry 
+
+The previous figure and model were run using the dominant population from blood derived normal samples, rather than the sample that DDR was based off. Only about 10% of samples vary in dominant population between sample types so changes are minimal. 
+
+```{r blood_ancestry, warning=FALSE, fig.pos="center", fig.cap=c("DDR scores by dominant ancestral populations (in normal) and stratified by cancer type."), fig.width=12, fig.height=12}
+
+ancestry <- "https://github.com/GerkeLab/TCGAancestry/raw/master/data/admixture_calls.txt"
+blood_ancestry <- read.table(ancestry, sep="\t", header = TRUE)
+
+blood_ancestry <- blood_ancestry %>%
+  filter(tissue == "Blood Derived Normal")
+
+blood_dat <- dat %>% 
+  mutate(patient_id = substr(patient_id,1,12)) %>%
+  inner_join(blood_ancestry,by=c("patient_id" = "ID"))
+
+ggplot(blood_dat, aes(x = POP, y = rppa_ddr_score, fill = as.factor(POP))) + 
+  scale_fill_manual(values = rep("white",length(unique(blood_dat$POP)))) +
+  geom_jitter(position = position_jitterdodge(jitter.width = .95,
+                                              jitter.height = 0,
+                                              dodge.width = .95),
+              aes(fill = as.factor(POP), col = as.factor(POP)), alpha = 0.5) + 
+  geom_boxplot(outlier.shape = NA, alpha = 0) + 
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "black")) + 
+  guides(fill=FALSE, colour=FALSE) +
+  labs(x = "Ancestral Population - Blood Normal", y = "DDR Score") + 
+  scale_color_viridis_d() + 
+  facet_wrap(~acronym)
+
+dom_blood_pop <- lm(rppa_ddr_score ~ relevel(blood_dat$POP, ref="EUR") + acronym, data = blood_dat)
+
+tableX <- tidy(dom_blood_pop) 
+
+tableX <- tableX[2:5,]
+tableX$term <- substr(tableX$term, 36,38)
+
+kable(tableX) %>% 
+  kable_styling(bootstrap_options = "striped", full_width = F)
+
+
+# entropy <- "https://github.com/GerkeLab/TCGAancestry/raw/master/data/entropy.txt"
+# ent <- read.table(entropy, sep="\t", header = TRUE)
+# 
+# entropy <- ent %>%
+#   filter(tissue == "Blood Derived Normal")
+# 
+# entropy <- dat %>% 
+#   mutate(patient_id = substr(patient_id,1,12)) %>%
+#   inner_join(entropy,by=c("patient_id" = "ID"))
+
 
 ```
