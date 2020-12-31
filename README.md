@@ -1,6 +1,8 @@
 Homologous Recombination Deficiency
 ================
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4406799.svg)](https://doi.org/10.5281/zenodo.4406799)
+
 “We calculated HRD scores following previous published 3 components of
 HRD/genome scarring scores: HRD-LOH (Abkevich et al., 2012), LST (Popova
 et al., 2012), NtAI (Birkbak et al., 2012) and the implementation of a
